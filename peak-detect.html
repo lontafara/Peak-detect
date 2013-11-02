@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Peak detect test</title>
+<link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet">
+<script>
+        
+        var contextoDeAudio, analizador, mibuffer, procesado,
+            miFuente,
+            misNodos = {},espectro,
+            suena = false;
+ 
+        function init() {
+            if('webkitAudioContext' in window) {
+               contextoDeAudio = new webkitAudioContext();
+            }
+        }
+ 
+ // CARGAMOS el archivo con petición asíncorna XMLHTTP
+     function cargarSonido(url) {
+        var request = new XMLHttpRequest();
+        request.open('GET', url, true);
+
+        // Cuando cargen los datos de audio:
+        request.responseType = 'arraybuffer';
+        request.addEventListener('load', bufferSound, false);
+        request.send();
+    
+	}
+
+
+     function bufferSound(event) {
+         var request = event.target;
+         var buffer = contextoDeAudio.createBuffer(request.response, false);
+         mibuffer = buffer;
+    }
+//------USAMOS  MICrófono
+	function sonidoDirecto() {
+		
+    	getUserMedia({audio:true}, reproducirMic);
+	}
+	function error() {
+		alert('Stream generation failed.');
+	}
+	function getUserMedia(tipo, llamada) {
+    	try {
+        	navigator.webkitGetUserMedia(tipo, llamada, error);
+   	    } catch (e) {
+        	alert('webkitGetUserMedia excepción :' + e);
+        }
+   }	 
+ 
+//play desde micro
+function reproducirMic(stream) {
+	   
+	       var source = contextoDeAudio.createMediaStreamSource(stream);
+            // crea analizador
+			analizador = contextoDeAudio.createAnalyser();
+			analizador.fftSize = 2048;            
+            cadenaDeAudio(source);
+            espectro = setInterval(drawSpectrum, 20); //llamamos a la función dibujarEspectro cada 20 ms
+            miFuente = source;
+        }  
+      //establecemos la cadena de audio 
+        function cadenaDeAudio(source) {
+            misNodos.filter = contextoDeAudio.createBiquadFilter();
+            misNodos.panner = contextoDeAudio.createPanner();
+            misNodos.volume = contextoDeAudio.createGainNode();
+            // var compressor = contextoDeAudio.createDynamicsCompressor();
+ 
+            // set node values to current slider values
+            var highpass = document.querySelector('#highpass').value;
+            var panX = document.querySelector('#pan').value;
+            var volume = document.querySelector('#volume').value;
+ 
+            misNodos.filter.type = 1; // highpass
+            misNodos.filter.frequency.value = highpass;
+            misNodos.panner.setPosition(panX, 0, 0);
+            misNodos.volume.gain.value = volume;
+ 
+            // pass source through series of nodes
+            source.connect(misNodos.filter);
+            misNodos.filter.connect(misNodos.panner);
+            misNodos.panner.connect(misNodos.volume);
+            misNodos.volume.connect(analizador);
+ 
+            return source;
+        }
+ 		
+        function playSound() {
+			 contextoDeAudio = new webkitAudioContext();
+                // creamos los nodos
+				//procesado = contextoDeAudio.createScriptProcessor(1024);
+				//procesado.onaudioprocess = enProceso;
+                analizador = contextoDeAudio.createAnalyser();
+                //analizador.smoothingTimeConstant = 0.85;
+				analizador.fftSize = 2048;
+                //analizador.connect(procesado);
+				analizador.connect(contextoDeAudio.destination);
+ 
+                cargarSonido("audios/Huajara.mp3");
+            // create a new AudioBufferSourceNode
+            var source = contextoDeAudio.createBufferSource();
+            source.buffer = mibuffer;
+            source.loop = true;
+            source = cadenaDeAudio(source);
+            // play right now (0 seconds from now)
+            // can also pass contextoDeAudio.currentTime
+            source.noteOn(0);
+            espectro = setInterval(drawSpectrum, 20); //llamamos a la función dibujarEspectro cada 20 ms
+            miFuente = source;
+        }
+ 
+        function pauseSound() {
+            var source = miFuente;
+            source.noteOff(0);
+            clearInterval(espectro);
+        }
+ 
+        function toggleSound(button) {
+            if(!suena) {
+                playSound();
+                button.value = "Parar Sonido";
+                suena = true;
+            }
+            else {
+                pauseSound();
+                button.value = "Reproducir";
+                suena = false;
+            }
+        }
+ 
+        function drawSpectrum() {
+            var canvas = document.querySelector('canvas');
+            var ctx = canvas.getContext('2d');
+            var ancho = canvas.width;
+            var alto = canvas.height;
+            var bar_width = 3;
+ 
+            ctx.clearRect(0, 0, ancho, alto);
+ 			//-----Byte de enteros, array de 256 valores de amplitud
+            var ByteDatosFrec = new Uint8Array(analizador.frequencyBinCount);
+            analizador.getByteFrequencyData(ByteDatosFrec);
+ 			
+			//--Flotantes
+			var DominioFrecuencia = new Float32Array(analizador.frequencyBinCount);
+			analizador.getByteFrequencyData(DominioFrecuencia);
+			
+			//---- VISUALIZAMOS ALGUNAS VARIABLES
+			//console.log(ByteDatosFrec);
+			
+			var nyquist = contextoDeAudio.samplerate/2;
+			//console.log(nyquist);
+            (document.querySelector(".arrayFreq")).innerHTML = ByteDatosFrec.values;
+			(document.querySelector(".LongarrayFreq")).innerHTML = ByteDatosFrec.length;
+			
+			(document.querySelector(".muestreo")).innerHTML = contextoDeAudio.sampleRate;
+			(document.querySelector(".fftsize")).innerHTML = analizador.fftSize;
+			
+			
+			
+			//--------------
+			
+			var NumerodeBarras = Math.round(ancho / bar_width);
+            var maximo = ByteDatosFrec[0];
+			//for (var i = 0; i < NumerodeBarras; i++) {
+			for (var i = 0; i < (ByteDatosFrec.length); i++) {
+                var magnitud = ByteDatosFrec[i];
+				
+				 if(magnitud > maximo){  
+       		     maximo = magnitud;
+				 var pos = i;
+				 var frecuencia = ((pos*contextoDeAudio.sampleRate)/analizador.fftSize);
+       			  }  
+			}
+			for (var i = 0; i < (ByteDatosFrec.length); i++) {
+                var magnitud = ByteDatosFrec[i];
+                // green color if its the peak
+				if (magnitud == maximo){ctx.fillStyle = "rgb(25,255,0)"}else{ctx.fillStyle = "rgb(0,0,0)"}
+                ctx.fillRect(bar_width * i, alto, bar_width -1, -magnitud + 60);
+				(document.querySelector(".valor")).innerHTML = maximo;
+				
+				(document.querySelector(".posicion")).innerHTML = pos;
+				(document.querySelector(".frecuencia")).innerHTML = frecuencia;
+				//console.log(i);
+				//console.log(maximo);
+				
+            }
+        }
+        function sliderChange(slider) {
+            if(contextoDeAudio.activeSourceCount > 0) {
+                if(slider.id == 'highpass') {
+                    var highpass = slider.value;
+                    misNodos.filter.frequency.value = highpass;
+                }
+                else if(slider.id == 'pan') {
+                    var panX = slider.value;
+                    misNodos.panner.setPosition(panX, 0, 0);
+                }
+                else if(slider.id == 'volume') {
+                    var volume = slider.value;
+                    misNodos.volume.gain.value = volume;
+                }
+            }
+        }
+    </script>
+
+
+</head>
+
+<body onLoad="init();">
+<div class="container">
+      <div class="header">
+        <ul class="nav nav-pills pull-right">
+        </ul>
+        <h3 class="text-muted">Peak detect test</h3>
+      </div>
+
+      <div class="jumbotron">
+         <canvas width="1024" height="200"></canvas>
+      </div>
+
+      <div class="row marketing">
+        <div class="col-lg-6">
+            <ul class="list-unstyled">
+              <li><input id="play" onclick="toggleSound(this)" type="button" value="Reproducir" class="btn btn-default"/></li>
+              <li><button class="btn btn-default" onclick="sonidoDirecto()">usar sonido de microfono</button></li>
+              <li><span>Highpass:</span></li>
+              <li><input id="highpass" onchange="sliderChange(this)" type="range" min="0" max="1024" step="1" value="512" /></li>
+              <li><span>Pan:</span></li>
+              <li><input id="pan" onchange="sliderChange(this)" type="range" min="-3" max="3" step="0.01" value="0" /></li>
+              <li><span>Volume:</span></li>
+              <li><input id="volume" onchange="sliderChange(this)" type="range" min="0" max="1" step="0.01" value="1" /></li>
+              </ul>
+        </div>
+        
+
+       <div class="col-lg-6">
+          
+			<span>Valor del máximo: <span class="valor">0</span></span>
+			<span>Posición del array:<span class="posicion">posicion</span></span>
+            <span>Frecuencia:<span class="frecuencia">frecuencia</span>Hz</span>
+		
+  
+           <p>FFTsize <span class="fftsize">0</span></p>
+            <p>Frecuencia de Muestreo: <span class="muestreo">0</span></p>
+            
+    		<p>Longitud del Array de datos de frecuencia. 8 Bits : <span class="LongarrayFreq">0</span></p>
+            
+            <p>Array de datos de frecuencia. 8 Bits: <span class="arrayFreq">0</span></p>
+            
+            <p>Longitud del Array de datos de frecuencia. 32 Bits</p>
+          
+            
+			<span class="FrecuenciaMuestreo">posicion</span>
+      </div>
+     </div>
+   </div>
+
+      <div class="footer">
+        <p></p>
+      </div>
+
+
+</body>
+</html>
