@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Peak detect test</title>
+<title>Detector de pico</title>
 <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet">
 <script>
         
@@ -134,23 +134,25 @@ function reproducirMic(stream) {
         function drawSpectrum() {
             var canvas = document.querySelector('canvas');
             var ctx = canvas.getContext('2d');
-            var ancho = canvas.width;
-            var alto = canvas.height;
-            var bar_width = 3;
+            ANCHO=1024;
+			ALTO=256;
+			canvas.width = ANCHO;
+            canvas.height = ALTO;
+            var bar_width = 1;
  
-            ctx.clearRect(0, 0, ancho, alto);
+            ctx.clearRect(0, 0, ANCHO, ALTO);
+			//dibujo línea comparador
+			dibujarlineacomparador( ctx, 0, ANCHO, 128);
+			dibujarescala(ctx, ALTO,ANCHO);
+			
  			//-----Byte de enteros, array de 256 valores de amplitud
             var ByteDatosFrec = new Uint8Array(analizador.frequencyBinCount);
             analizador.getByteFrequencyData(ByteDatosFrec);
- 			
-			//--Flotantes
-			var DominioFrecuencia = new Float32Array(analizador.frequencyBinCount);
-			analizador.getByteFrequencyData(DominioFrecuencia);
 			
 			//---- VISUALIZAMOS ALGUNAS VARIABLES
 			//console.log(ByteDatosFrec);
 			
-			var nyquist = contextoDeAudio.samplerate/2;
+			//var nyquist = contextoDeAudio.samplerate/2;
 			//console.log(nyquist);
             (document.querySelector(".arrayFreq")).innerHTML = ByteDatosFrec.values;
 			(document.querySelector(".LongarrayFreq")).innerHTML = ByteDatosFrec.length;
@@ -162,23 +164,38 @@ function reproducirMic(stream) {
 			
 			//--------------
 			
-			var NumerodeBarras = Math.round(ancho / bar_width);
+			var NumerodeBarras = Math.round(ANCHO / ByteDatosFrec.length);
             var maximo = ByteDatosFrec[0];
 			//for (var i = 0; i < NumerodeBarras; i++) {
+		
 			for (var i = 0; i < (ByteDatosFrec.length); i++) {
-                var magnitud = ByteDatosFrec[i];
+                var valor = ByteDatosFrec[i];
+                
 				
-				 if(magnitud > maximo){  
-       		     maximo = magnitud;
-				 var pos = i;
-				 var frecuencia = ((pos*contextoDeAudio.sampleRate)/analizador.fftSize);
-       			  }  
-			}
-			for (var i = 0; i < (ByteDatosFrec.length); i++) {
-                var magnitud = ByteDatosFrec[i];
-                // green color if its the peak
-				if (magnitud == maximo){ctx.fillStyle = "rgb(25,255,0)"}else{ctx.fillStyle = "rgb(0,0,0)"}
-                ctx.fillRect(bar_width * i, alto, bar_width -1, -magnitud + 60);
+				//Comparo valores mallores que el umbral
+				if(valor < 128){
+						for (var m = 0; m < (ByteDatosFrec.length); m++) {
+              				  var magnitud = ByteDatosFrec[m];
+				
+								 if(magnitud > maximo){  
+       		   					  maximo = magnitud;
+								  var pos = m;
+								  var frecuencia = ((pos*contextoDeAudio.sampleRate)/analizador.fftSize);
+       			  					
+								  }  
+							}
+	
+					}
+				
+				
+				
+				
+				// Ajustar valores en el canvas
+				var porcentaje = valor / 256;
+				var altobarra = ALTO * porcentaje;
+				var margen = ALTO - altobarra -1;
+				if (valor == maximo){ctx.fillStyle = "rgb(25,255,0)"}else{ctx.fillStyle = "rgb(0,0,0)"}
+                ctx.fillRect(i, margen, bar_width, altobarra);
 				(document.querySelector(".valor")).innerHTML = maximo;
 				
 				(document.querySelector(".posicion")).innerHTML = pos;
@@ -186,8 +203,39 @@ function reproducirMic(stream) {
 				//console.log(i);
 				//console.log(maximo);
 				
+				
             }
         }
+		// línea comparador---------
+		function dibujarlineacomparador(c, x1, x2, y) {
+		c.lineWidth = 1;
+		var adaptedY = Math.floor(y)+0.5;
+		c.beginPath();
+		c.moveTo(x1, 128);
+		c.lineTo(x2, 128);
+		c.stroke();
+		}
+	    //Escala 256 valores
+		function dibujarescala(c, ALTO, ANCHO){
+			c.font = "8pt Helvetica";
+			var count =  0;
+			var paso =50;
+			var margen=5;
+			var colHead = 0;
+			var rowHead = 0;
+			yScalar = (ALTO - colHead - margen) / (ALTO);
+			for (i=ALTO; i>=0; i -=paso){
+				y = colHead + (yScalar * count * paso);
+				c.fillText (i, margen, y + margen )
+				c.moveTo(rowHead, y)
+				c.lineTo(ANCHO, y)
+					count++;
+				}
+			
+			
+		}
+		
+		
         function sliderChange(slider) {
             if(contextoDeAudio.activeSourceCount > 0) {
                 if(slider.id == 'highpass') {
@@ -254,6 +302,25 @@ function reproducirMic(stream) {
           
             
 			<span class="FrecuenciaMuestreo">posicion</span>
+             <p>Array de equivalencias</p>
+			<span class="equivalencia">valores</span>
+            <script>
+            //Imptimir equivalencias de posición/frecuencia
+		var equivalencias = Array();
+		for ( var m = 0; m <= (1024); m++) {      
+			 var frecuencia = ((m*44100)/2048);
+			 equivalencias[m] = frecuencia;			
+			
+			}
+		console.log(
+			equivalencias
+			//No se puede construir un afinador musical con esta resolución de transformada.
+			)
+		
+            
+            
+            
+            </script>
       </div>
      </div>
    </div>
