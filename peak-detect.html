@@ -155,7 +155,7 @@ function reproducirMic(stream) {
 			//var nyquist = contextoDeAudio.samplerate/2;
 			//console.log(nyquist);
             (document.querySelector(".arrayFreq")).innerHTML = ByteDatosFrec.values;
-			(document.querySelector(".LongarrayFreq")).innerHTML = ByteDatosFrec.length;
+			
 			
 			(document.querySelector(".muestreo")).innerHTML = contextoDeAudio.sampleRate;
 			(document.querySelector(".fftsize")).innerHTML = analizador.fftSize;
@@ -274,6 +274,9 @@ function reproducirMic(stream) {
             <ul class="list-unstyled">
               <li><input id="play" onclick="toggleSound(this)" type="button" value="Reproducir" class="btn btn-default"/></li>
               <li><button class="btn btn-default" onclick="sonidoDirecto()">usar sonido de microfono</button></li>
+              </ul>
+              <div class="alert alert-info">
+              <ul class="list-unstyled">
               <li><span>Paso alto:</span></li>
               <li><input id="highpass" onchange="sliderChange(this)" type="range" min="0" max="1024" step="1" value="512" /></li>
               <li><span>Pan:</span></li>
@@ -281,29 +284,24 @@ function reproducirMic(stream) {
               <li><span>Volumen:</span></li>
               <li><input id="volume" onchange="sliderChange(this)" type="range" min="0" max="1" step="0.01" value="1" /></li>
               </ul>
+              </div>
         </div>
         
 
        <div class="col-lg-6">
-          
-			<span>Valor del máximo: <span class="valor">0</span></span>
-			<span>Posición del array:<span class="posicion">posicion</span></span>
-            <span>Frecuencia:<span class="frecuencia">frecuencia</span>Hz</span>
+          <div class="alert alert-success">
+			<span>Valor del máximo: &nbsp;<strong><span class="valor">0</span></strong></span>
+			<span>Posición del array:&nbsp;<strong><span class="posicion">posicion</span></strong></span>
+            <span>Frecuencia:&nbsp;<strong><span class="frecuencia">frecuencia</span>&nbsp;</strong>Hz</span>
 		
   
            <p>FFTsize <span class="fftsize">0</span></p>
             <p>Frecuencia de Muestreo: <span class="muestreo">0</span></p>
             
-    		<p>Longitud del Array de datos de frecuencia. 8 Bits : <span class="LongarrayFreq">0</span></p>
-            
-            <p>Array de datos de frecuencia. 8 Bits: <span class="arrayFreq">0</span></p>
-            
-            <p>Longitud del Array de datos de frecuencia. 32 Bits</p>
-          
-            
-			<span class="FrecuenciaMuestreo">posicion</span>
-             <p>Array de equivalencias</p>
-			<span class="equivalencia">valores</span>
+    		<p>Longitud del Array de datos de frecuencia. 8 Bits : <span class="arrayFreq">0</span></p>
+           </div>  
+      </div>
+       </div>
             <script>
             //Imptimir equivalencias de posición/frecuencia
 		var equivalencias = Array();
@@ -312,17 +310,21 @@ function reproducirMic(stream) {
 			 equivalencias[m] = frecuencia;			
 			
 			}
+			
 		console.log(
 			equivalencias
 			//No se puede construir un afinador musical con esta resolución de transformada.
 			)
-		
+				
+				document.write("<h3>Intervalos de frecuencia:</h3></br><p>En Hz</p>");
+
+				for (var c=0; c<equivalencias.length; c++)
+  			    document.write(c +"&nbsp;&nbsp;  "+equivalencias[c] + "<br>");
             
             
             
             </script>
-      </div>
-     </div>
+    
    </div>
 
       <div class="footer">
